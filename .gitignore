@@ -1,0 +1,6 @@
+.DS_STORE
+node_modules
+
+#VS Code configs
+jsconfig.json
+launch.json
