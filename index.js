@@ -59,7 +59,7 @@ function updateTicketInfoInFirebase (date, event) {
     if (err) {
       console.log(';(');
     } else {
-      console.log('nice!');
+      console.log('Updated ticket info for ' + info.eventId);
     }
   });
 };
@@ -81,6 +81,8 @@ function addEventToFirebase (event) {
           deferred.resolve(event);
         }
       });
+    } else {
+      deferred.resolve(event);
     }
   });
   
