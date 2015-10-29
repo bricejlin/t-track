@@ -1,0 +1,83 @@
+<!doctype html>
+	<head></head>
+	<body>
+		<canvas id="myChart" width="400" height="400"></canvas>
+		<script src="https://cdn.firebase.com/js/client/2.3.1/firebase.js"></script>
+		<script src="../node_modules/firebase/lib/firebase-web.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+		<script>
+			var rootRef = new Firebase('https://stubhub-tracker.firebaseio.com/');
+			var eventsMap = {};
+			
+			var schema = {
+				labels: [],
+				datasets: []
+			};
+			
+			var events = {};
+
+			// Fetch id / name mapping
+			rootRef.child('/events').on('value', function (snap) {
+				var events = snap.val();
+
+				Object.keys(events).forEach(function (eventId) {
+					eventsMap[eventId] = events[eventId].title;
+				});
+			});
+			
+			rootRef.child('/ticketInfo').on('value', function (snap) {
+				var ticketPrices = snap.val();
+				
+				Object.keys(ticketPrices).forEach(function (date) {
+					schema.labels.push(date);
+					
+					Object.keys(ticketPrices[date]).forEach(function (hash) {
+						var ticketInfo = ticketPrices[date][hash];
+						if (events[ticketInfo.eventId]) {
+							events[ticketInfo.eventId].push(ticketInfo.ticketInfo);
+						} else {
+							events[ticketInfo.eventId] = [];
+							events[ticketInfo.eventId].push(ticketInfo.ticketInfo);
+						}
+					});
+				});
+				
+				Object.keys(events).forEach(function (eventId) {
+					var prices = events[eventId].map(function (ticketInfo) {
+						return ticketInfo.minPrice;
+					});
+					
+					var obj = {
+						label: eventsMap[eventId],
+						fillColor: generateRandomColor(),
+						strokeColor: '#ccc',
+						pointColor: 'rgba(220,220,220,1)',
+						pointStrokeColor: '#fff',
+						pointHighlightFill: '#fff',
+						pointHighlightStroke: 'rgba(220,220,220,1)',
+						data: prices
+					};
+					
+					schema.datasets.push(obj);
+				});
+				
+				var ctx = document.getElementById("myChart").getContext("2d");
+				var myNewChart = new Chart(ctx).Line(schema, {
+					datasetFill: false
+				});
+			});
+			
+			function getRandom(min, max) {
+				return Math.floor(Math.random() * (max - min + 1)) + min;
+			}
+			
+			function generateRandomColor () {
+				return 'rgba(' + [
+					getRandom(0, 220),
+					getRandom(0, 220),
+					getRandom(0, 220),
+					'0.3)'].join(',');
+			}
+		</script>
+	</body>
+</html> 
