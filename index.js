@@ -6,21 +6,16 @@ const curry = require('curry');
 const config = require('./conf.json');
 const AUTH = config.stubHubAuth;
 
-const EVENTS_URI = 'search/catalog/events/v2?id=';
-
 const stubHubFactory = require('./stubhubClient');
 
 const rootRef = new Firebase('https://stubhub-tracker.firebaseio.com/');
 
+const EVENTS_URI = 'search/catalog/events/v2?id=';
 const ONE_MINUTE = 1000 * 60;
 const ONE_HOUR = ONE_MINUTE * 60;
 
 const sHEventCodes = [
-  '9348936',
-  '9365164',
-  '9390556',
-  '9390558',
-  '9315233'
+  '9348936'
 ];
 
 const url = (id) => stubHubFactory.STUBHUB_BASE_URL + EVENTS_URI + id;
@@ -29,8 +24,8 @@ const stubHub = stubHubFactory.create(AUTH);
 
 const updateTicketInfo = curry(updateTicketInfoInFirebase);
 
-// setInterval(fetch, ONE_HOUR * 2);
-fetch();
+setInterval(fetch, ONE_HOUR);
+// fetch();
 
 function fetch () {  
   const date = (new Date()).toISOString().split('.')[0];
@@ -39,9 +34,22 @@ function fetch () {
     stubHub.fetch(url(event))
       .then(parseEventRes)
       .then(addEventToFirebase)
-      .then(updateTicketInfo(date));
+      .then(updateTicketInfo(rootRef, date));
   });
 }
+
+/**
+ * Parses response from stubhub event api
+ * @param {object} res
+ * @return {object}
+ */
+function parseEventRes (res) {
+  if (res && res.numFound === 0) {
+    return null;
+  }
+
+  return res.events[0];
+};
 
 /**
  * Update ticket info in firebase
@@ -49,7 +57,7 @@ function fetch () {
  * @param {obj} event
  * @return {void}
  */
-function updateTicketInfoInFirebase (date, event) {
+function updateTicketInfoInFirebase (rootRef, date, event) {
   var info = {
     eventId: event.id,
     ticketInfo: event.ticketInfo
@@ -66,22 +74,32 @@ function updateTicketInfoInFirebase (date, event) {
 
 function addEventToFirebase (event) {
   if (event === null) return;
-  var deferred = Promise.defer();
+
+  const deferred = Promise.defer();
+  const eventPath = 'events/' + event.id;
   
-  // Check listing already exists
-  rootRef.child('events/' + event.id).once('value', function (snap) {
-    // If not, add event to firebase
-    if (!snap.val()) {
-      rootRef.child('events/' + event.id).set(event, function (err) {
-        if (err) {
-          console.log('sum ting wong');
-          deferred.reject(err);
-        } else {
-          console.log('data saved successfully!');
-          deferred.resolve(event);
-        }
-      });
+  checkIfObjectExistsInFirebase(rootRef, eventPath)
+    .then(function (isExisting) {
+      if (isExisting) {
+        // Pass event on
+        deferred.resolve(event);
+      } else {
+        updateEventFieldInFirebase(rootRef, eventPath, event);
+      }
+    });
+
+  return deferred.promise;
+}
+
+function updateEventFieldInFirebase (rootRef, eventPath, event) {
+  const deferred = Promise.defer();
+
+  rootRef.child(eventPath).set(event, function (err) {
+    if (err) {
+      console.log('sum ting wong');
+      deferred.reject(err);
     } else {
+      console.log('New event saved successfully!');
       deferred.resolve(event);
     }
   });
@@ -90,14 +108,17 @@ function addEventToFirebase (event) {
 }
 
 /**
- * Parses response from stubhub event api
- * @param {object} res
- * @return {object}
+ * Checks if a path in firebase db holds any values
+ * @param {firebaseClient} rootRef
+ * @param {string} path
+ * @return {promise}
  */
-function parseEventRes (res) {
-  if (res && res.numFound === 0) {
-    return null;
-  }
-  
-  return res.events[0];
-};
+function checkIfObjectExistsInFirebase (rootRef, path) {
+  var deferred = Promise.defer();
+
+  rootRef.child(path).once('value', function (snap) {
+    deferred.resolve(!!snap.val());
+  });
+
+  return deferred.promise;
+}
