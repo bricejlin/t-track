@@ -24,8 +24,7 @@ const stubHub = stubHubFactory.create(AUTH);
 
 const updateTicketInfo = curry(updateTicketInfoInFirebase);
 
-setInterval(fetch, ONE_HOUR);
-// fetch();
+setInterval(fetch, config.REFETCH_HOUR_INTERVAL * ONE_HOUR);
 
 function fetch () {  
   const date = (new Date()).toISOString().split('.')[0];
