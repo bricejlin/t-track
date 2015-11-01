@@ -1,10 +1,30 @@
 <!doctype html>
 	<head></head>
 	<body>
-		<canvas id="myChart" width="400" height="400"></canvas>
+		<div class="container">
+			<canvas id="myChart" width="600" height="600"></canvas>
+			<table class="table" id="container">
+				<tr>
+					<th>Date</th>
+					<th>Min Price</th>
+					<th>Total Listings</th>
+					<th>Total Postings</th>
+					<th>Total Tickets</th>
+				</tr>
+			</table>
+		</div>
 		<script src="https://cdn.firebase.com/js/client/2.3.1/firebase.js"></script>
-		<script src="../node_modules/firebase/lib/firebase-web.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.4/handlebars.min.js"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/css/bootstrap.min.css">
+		<script id="ticket-info-template" type="text/x-handlebars-template">
+			<td>{{ date }}</td>
+			<td>{{ minPrice }}</td>
+			<td>{{ totalListings }}</td>
+			<td>{{ totalPostings }}</td>
+			<td>{{ totalTickets }}</td>
+		</script>
 		<script>
 			var rootRef = new Firebase('https://stubhub-tracker.firebaseio.com/');
 			var eventsMap = {};
@@ -29,7 +49,8 @@
 				var ticketPrices = snap.val();
 				
 				Object.keys(ticketPrices).forEach(function (date) {
-					schema.labels.push(date);
+					var dateStr = (new Date(date)).toUTCString();
+					schema.labels.push(dateStr);
 					
 					Object.keys(ticketPrices[date]).forEach(function (hash) {
 						var ticketInfo = ticketPrices[date][hash];
@@ -42,6 +63,19 @@
 					});
 				});
 				
+				var container = document.getElementById('container');
+				var source = document.getElementById('ticket-info-template');
+				var tpl = Handlebars.compile(source.innerHTML);
+
+				Object.keys(events).forEach(function (eventId) {
+					events[eventId].forEach(function (ticketInfo, i) {
+						var info = document.createElement('tr');
+						var date = (new Date(schema.labels[i]));
+						info.innerHTML = tpl(Object.assign({}, ticketInfo, { date: date }));
+						container.appendChild(info);
+					});
+				});
+
 				Object.keys(events).forEach(function (eventId) {
 					var prices = events[eventId].map(function (ticketInfo) {
 						return ticketInfo.minPrice;
