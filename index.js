@@ -15,7 +15,8 @@ const ONE_MINUTE = 1000 * 60;
 const ONE_HOUR = ONE_MINUTE * 60;
 
 const sHEventCodes = [
-  '9348936'
+  '9348936',
+  '9431167'
 ];
 
 const url = (id) => stubHubFactory.STUBHUB_BASE_URL + EVENTS_URI + id;
@@ -24,7 +25,8 @@ const stubHub = stubHubFactory.create(AUTH);
 
 const updateTicketInfo = curry(updateTicketInfoInFirebase);
 
-setInterval(fetch, config.REFETCH_HOUR_INTERVAL * ONE_HOUR);
+// setInterval(fetch, config.REFETCH_HOUR_INTERVAL * ONE_HOUR);
+fetch();
 
 function fetch () {  
   const date = (new Date()).toISOString().split('.')[0];
